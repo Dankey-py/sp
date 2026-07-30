@@ -9,12 +9,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // with options:
-      // http://localhost:5173/api/bar
-      //   -> http://jsonplaceholder.typicode.com/bar
-      '/api': {
-        target: 'http://localhost:6000',
-        // -> http://localhost:6000/bar
+      // Keep the existing Flask user endpoint available during development.
+      // Other /api routes, including /api/chat, are handled by React Router.
+      "/api/user": {
+        target: "http://localhost:6000",
         changeOrigin: true,
       },
     },

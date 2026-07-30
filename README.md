@@ -26,13 +26,48 @@ npm install
 
 ### Development
 
-Start the development server with HMR:
+Create the server environment file (never commit the real API key):
+
+```bash
+cp .env.example .env
+```
+
+Set the domestic-platform `MOONSHOT_API_KEY` in `.env`, then start the
+development server with HMR:
 
 ```bash
 npm run dev
 ```
 
 Your application will be available at `http://localhost:5173`.
+
+### Kimi chat API
+
+This project uses the Kimi domestic platform through the OpenAI-compatible
+endpoint `https://api.moonshot.cn/v1`. Create the API Key at
+`https://platform.kimi.com`; international-platform keys are not compatible.
+
+Send one message:
+
+```bash
+curl -X POST http://localhost:5173/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"你好，请介绍一下你自己"}'
+```
+
+For a multi-turn conversation, send the complete history on every request because
+Kimi's Chat Completions API is stateless:
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "You are a study planning assistant." },
+    { "role": "user", "content": "Help me plan two hours of revision." },
+    { "role": "assistant", "content": "Which subject are you revising?" },
+    { "role": "user", "content": "Mathematics." }
+  ]
+}
+```
 
 ## Building for Production
 

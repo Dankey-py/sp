@@ -1,21 +1,14 @@
 
 import {
-  BrowserRouter,
-  isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
-  Route,
   Scripts,
   ScrollRestoration,
-  Navigate,
-  Routes,
 } from "react-router";
 
 // import type { Route } from "./+types/root";
 import "./app.css";
-// import Routes from "./routes";
-import { Welcome } from "./welcome/welcome";
 
 // export const links: Route.LinksFunction = () => [
 //   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -49,19 +42,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-         {/* <Route element={} AppLayout: function */}
-          <Route index element={<Welcome />} />
-          <Route path="planner" element={<Welcome/>} />
-          <Route path="myself" element={<Welcome/>} />
-
-          {/* when input unmatched url, returned to the homgpage */}
-          <Route path="*" element= {<Navigate to="/" replace /> } />
-      </Routes>
-    </BrowserRouter>
-  )
+  return <Outlet />;
 }
 
 // export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
