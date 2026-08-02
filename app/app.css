@@ -493,7 +493,7 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 :root {
   --shadow: none;
   font-family: "Times New Roman", Times, serif;
-}
+} 
 
 html,
 body { background: var(--paper); }
@@ -766,6 +766,7 @@ input:disabled { background: #ededed; color: #888888; }
 *::after {
   border-radius: 0 !important;
   box-shadow: none !important;
+  background-image: none !important;
 }
 
 .field-help {
