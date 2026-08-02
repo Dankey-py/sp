@@ -43,14 +43,13 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. During development, Vite keeps `/api/chat` and
-`/api/schedule` in React Router and forwards the remaining `/api/*` requests to
-Flask on port `6000`.
+Open `http://127.0.0.1:5173`. During development, Vite forwards every `/api/*`
+request—including Kimi chat and scheduling—to Flask on port `6000`.
 
 ## Kimi configuration
 
 Create a domestic-platform API key at `https://platform.kimi.com` and place it
-in the frontend `.env` file:
+in `spback/.env`:
 
 ```env
 MOONSHOT_API_KEY=replace_with_your_domestic_moonshot_api_key
@@ -58,9 +57,11 @@ MOONSHOT_BASE_URL=https://api.moonshot.cn/v1
 MOONSHOT_MODEL=kimi-k2.6
 ```
 
-The key is loaded only by the React Router server and is never included in the
-browser bundle. Kimi scheduling uses a structured, non-thinking response so it
-can validate the proposed time block before showing it to the student.
+The key is loaded only by Flask and is never included in the frontend project or
+browser bundle. Both Kimi endpoints require the same authenticated user token as
+the SQLite APIs. Flask reads that user's planner context directly from SQLite.
+Kimi scheduling uses a structured, non-thinking response so it can validate the
+proposed time block before showing it to the student.
 
 If the Flask service is hosted separately in production, set
 `VITE_BACKEND_URL` to its public origin. Leave it blank for same-origin use.

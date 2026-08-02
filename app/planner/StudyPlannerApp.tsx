@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 
-import { ApiError, apiRequest } from "./api";
+import { ApiError, apiRequest, backendUrl } from "./api";
 import { AssistantPanel } from "./AssistantPanel";
 import { AuthScreen } from "./AuthScreen";
 import type {
@@ -458,9 +458,12 @@ export function StudyPlannerApp() {
     setLongTermSuggestion(null);
 
     try {
-      const response = await fetch("/api/schedule", {
+      const response = await fetch(`${backendUrl}/api/schedule`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           task: schedulerDraft.task,
           deadline: schedulerDraft.deadline,
@@ -470,19 +473,6 @@ export function StudyPlannerApp() {
           weeklyMinutes: Number(schedulerDraft.weeklyMinutes),
           preferredWindow: schedulerDraft.preferredWindow,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          busyPlans: plans
-            .filter(
-              (plan) =>
-                (plan.scheduled_start && plan.scheduled_end) ||
-                (plan.span_start && plan.span_end),
-            )
-            .map((plan) => ({
-              title: plan.title,
-              scheduledStart: plan.scheduled_start,
-              scheduledEnd: plan.scheduled_end,
-              spanStart: plan.span_start,
-              spanEnd: plan.span_end,
-            })),
         }),
       });
       const result = (await response.json()) as {
@@ -1436,7 +1426,7 @@ export function StudyPlannerApp() {
     );
   }
 
-  const activeContent = activeView === "overview" ? renderOverview() : activeView === "plans" ? renderPlans() : activeView === "subjects" ? renderSubjects() : activeView === "sessions" ? renderSessions() : activeView === "assistant" ? <AssistantPanel profile={currentProfile} subjects={subjects} plans={plans} /> : renderProfile();
+  const activeContent = activeView === "overview" ? renderOverview() : activeView === "plans" ? renderPlans() : activeView === "subjects" ? renderSubjects() : activeView === "sessions" ? renderSessions() : activeView === "assistant" ? <AssistantPanel token={token} /> : renderProfile();
 
   return (
     <div className="app-shell">

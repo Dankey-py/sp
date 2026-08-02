@@ -12,7 +12,6 @@
     "@react-router/node": "^8",
     "@react-router/serve": "^8",
     "isbot": "^5.1.36",
-    "openai": "^6.49.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",

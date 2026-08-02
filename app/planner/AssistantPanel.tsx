@@ -8,7 +8,7 @@ import {
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import type { Profile, StudyPlan, Subject } from "./types";
+import { backendUrl } from "./api";
 
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -29,13 +29,9 @@ const starterPrompts = [
 ];
 
 export function AssistantPanel({
-  profile,
-  subjects,
-  plans,
+  token,
 }: {
-  profile: Profile;
-  subjects: Subject[];
-  plans: StudyPlan[];
+  token: string;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -58,29 +54,17 @@ export function AssistantPanel({
     setSending(true);
     setError(null);
 
-    const context = [
-      `Student: ${profile.name}; grade: ${profile.grade || "not set"}; goals: ${profile.study_goals || "not set"}.`,
-      `Subjects: ${subjects.map((subject) => `${subject.name} ${subject.level} (target ${subject.target_grade || "unset"})`).join(", ") || "none yet"}.`,
-      `Current study plans: ${plans.map((plan) => `${plan.title} [${plan.priority}, ${plan.status}, due ${plan.deadline || "unset"}]`).join("; ") || "none yet"}.`,
-      "Use this live planner context to answer. When asked to adjust or recreate a plan, return a concise, actionable plan with subject, deadline, priority and status for each task.",
-    ].join("\n");
-
-    const requestMessages = nextMessages.map((message, index) =>
-      index === nextMessages.length - 1 && message.role === "user"
-        ? { ...message, content: `${message.content}\n\nPlanner context:\n${context}` }
-        : message,
-    );
-
     let streamedContent = "";
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
         headers: {
           Accept: "text/event-stream",
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ messages: requestMessages, stream: true }),
+        body: JSON.stringify({ messages: nextMessages, stream: true }),
       });
 
       if (!response.ok) {
