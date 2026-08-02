@@ -3,10 +3,10 @@ import { Welcome } from "../welcome/welcome";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Study Planner · Kimi 国内版" },
+    { title: "StudyOS · IB Study Manager" },
     {
       name: "description",
-      content: "使用 Kimi 国内版 AI 规划专注、高效的学习任务。",
+      content: "Plan IB deadlines, track study sessions and get contextual help from Kimi.",
     },
   ];
 }

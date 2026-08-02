@@ -9,10 +9,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Keep the existing Flask user endpoint available during development.
-      // Other /api routes, including /api/chat, are handled by React Router.
-      "/api/user": {
-        target: "http://localhost:6000",
+      // Keep Kimi's /api/chat route inside React Router and forward the
+      // remaining API surface to Flask over the same browser origin.
+      "^/api/(?!chat(?:/|$)|schedule(?:/|$))": {
+        target: "http://127.0.0.1:6000",
         changeOrigin: true,
       },
     },

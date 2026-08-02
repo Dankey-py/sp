@@ -25,6 +25,8 @@ function getMoonshotApiKey() {
 export const client = new OpenAI({
   apiKey: async () => getMoonshotApiKey(),
   baseURL: process.env.MOONSHOT_BASE_URL || DEFAULT_MOONSHOT_BASE_URL,
+  timeout: 30_000,
+  maxRetries: 1,
 });
 
 export const moonshotModel = process.env.MOONSHOT_MODEL || "kimi-k2.6";

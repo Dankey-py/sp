@@ -1,5 +1,9 @@
 import OpenAI from "openai";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type {
+  ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionCreateParamsStreaming,
+  ChatCompletionMessageParam,
+} from "openai/resources/chat/completions";
 
 import type { Route } from "./+types/api.chat";
 import {
@@ -13,6 +17,11 @@ type TextMessage = {
   role: "system" | "user" | "assistant";
   content: string;
 };
+
+type StreamEvent =
+  | { type: "delta"; content: string }
+  | { type: "done"; finishReason: string | null }
+  | { type: "error"; message: string };
 
 const textMessageRoles = new Set<TextMessage["role"]>([
   "system",
@@ -63,6 +72,29 @@ function json(data: unknown, init?: ResponseInit) {
   return response;
 }
 
+function apiErrorDetails(error: unknown) {
+  if (error instanceof OpenAI.APIError) {
+    const status = error.status || 502;
+    return {
+      status,
+      message:
+        status === 401
+          ? "Kimi 国内站 API Key 无效，请确认该 Key 创建于 platform.kimi.com。"
+          : error.message,
+    };
+  }
+
+  return {
+    status: 500,
+    message:
+      error instanceof Error ? error.message : "无法连接 Kimi 国内站 API。",
+  };
+}
+
+function encodeStreamEvent(encoder: TextEncoder, event: StreamEvent) {
+  return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
+}
+
 export function loader(_: Route.LoaderArgs) {
   return json(
     {
@@ -94,6 +126,11 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const messages = parseMessages(body);
+  const wantsStream =
+    (typeof body === "object" &&
+      body !== null &&
+      (body as Record<string, unknown>).stream === true) ||
+    request.headers.get("Accept")?.includes("text/event-stream");
 
   if (!messages) {
     return json(
@@ -127,10 +164,101 @@ export async function action({ request }: Route.ActionArgs) {
             { role: "system", content: studyPlannerSystemPrompt },
             ...messages,
           ];
+    const supportsThinkingSwitch =
+      moonshotModel.startsWith("kimi-k2.6") ||
+      moonshotModel.startsWith("kimi-k2.5");
+    const fastChatMode = supportsThinkingSwitch
+      ? { thinking: { type: "disabled" as const } }
+      : {};
+
+    if (wantsStream) {
+      // This is the real Kimi stream. Every content delta is forwarded as soon
+      // as Moonshot sends it, so the browser does not wait for the full answer.
+      const completion = await client.chat.completions.create(
+        {
+          model: moonshotModel,
+          messages: conversation,
+          stream: true,
+          ...fastChatMode,
+        } as ChatCompletionCreateParamsStreaming & {
+          thinking?: { type: "disabled" };
+        },
+      );
+      const encoder = new TextEncoder();
+      let cancelled = false;
+
+      request.signal.addEventListener(
+        "abort",
+        () => {
+          cancelled = true;
+          completion.controller.abort();
+        },
+        { once: true },
+      );
+
+      const responseStream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          let finishReason: string | null = null;
+
+          try {
+            for await (const chunk of completion) {
+              if (cancelled) return;
+
+              const choice = chunk.choices[0];
+              const content = choice?.delta.content;
+
+              if (content) {
+                controller.enqueue(
+                  encodeStreamEvent(encoder, { type: "delta", content }),
+                );
+              }
+
+              if (choice?.finish_reason) {
+                finishReason = choice.finish_reason;
+              }
+            }
+
+            if (!cancelled) {
+              controller.enqueue(
+                encodeStreamEvent(encoder, { type: "done", finishReason }),
+              );
+            }
+          } catch (error) {
+            if (!cancelled) {
+              controller.enqueue(
+                encodeStreamEvent(encoder, {
+                  type: "error",
+                  message: apiErrorDetails(error).message,
+                }),
+              );
+            }
+          } finally {
+            if (!cancelled) controller.close();
+          }
+        },
+        cancel() {
+          cancelled = true;
+          completion.controller.abort();
+        },
+      });
+
+      return new Response(responseStream, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, no-transform",
+          Connection: "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
 
     const completion = await client.chat.completions.create({
       model: moonshotModel,
       messages: conversation,
+      ...fastChatMode,
+    } as ChatCompletionCreateParamsNonStreaming & {
+      thinking?: { type: "disabled" };
     });
     const choice = completion.choices[0];
 
@@ -146,31 +274,11 @@ export async function action({ request }: Route.ActionArgs) {
       },
     });
   } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      const status = error.status || 502;
-      const message =
-        status === 401
-          ? "Kimi 国内站 API Key 无效，请确认该 Key 创建于 platform.kimi.com。"
-          : error.message;
-
-      return json(
-        {
-          code: status,
-          message,
-          data: null,
-        },
-        { status },
-      );
-    }
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : "无法连接 Kimi 国内站 API。";
+    const { status, message } = apiErrorDetails(error);
 
     return json(
-      { code: 500, message, data: null },
-      { status: 500 },
+      { code: status, message, data: null },
+      { status },
     );
   }
 }
