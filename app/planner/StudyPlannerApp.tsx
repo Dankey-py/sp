@@ -143,6 +143,14 @@ function calendarDays(month: Date) {
   });
 }
 
+function planBelongsToCalendarDay(plan: StudyPlan, dateKey: string) {
+  if (plan.span_start && plan.span_end) {
+    return dateKey >= plan.span_start && dateKey <= plan.span_end;
+  }
+  const calendarValue = plan.scheduled_start || plan.deadline;
+  return calendarValue ? calendarDateKey(calendarValue) === dateKey : false;
+}
+
 function formatMinutes(minutes: number) {
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
@@ -176,6 +184,9 @@ export function StudyPlannerApp() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // profile is the last saved server value used around the app. profileDraft
+  // belongs only to the form, so typing cannot change the sidebar or greeting.
+  const [profileDraft, setProfileDraft] = useState<Profile | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
@@ -188,6 +199,7 @@ export function StudyPlannerApp() {
   const [calendarMonth, setCalendarMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
+  const [expandedCalendarDay, setExpandedCalendarDay] = useState<string | null>(null);
   const [schedulerDraft, setSchedulerDraft] = useState({
     task: "",
     subjectId: "",
@@ -220,6 +232,7 @@ export function StudyPlannerApp() {
     priority: "medium",
     status: "pending",
     description: "",
+    phaseColor: "",
   });
   const [sessionDraft, setSessionDraft] = useState({
     subjectId: "",
@@ -230,6 +243,9 @@ export function StudyPlannerApp() {
   const [timerSubjectId, setTimerSubjectId] = useState("");
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
+  const planDraftPreviewColor = /^#[0-9a-fA-F]{6}$/.test(planDraft.phaseColor)
+    ? planDraft.phaseColor
+    : "#7563D9";
 
   useEffect(() => {
     setToken(window.localStorage.getItem("studyplanner_token"));
@@ -243,8 +259,18 @@ export function StudyPlannerApp() {
   }, [timerRunning]);
 
   useEffect(() => {
+    if (!expandedCalendarDay) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpandedCalendarDay(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [expandedCalendarDay]);
+
+  useEffect(() => {
     if (!token) {
       setProfile(null);
+      setProfileDraft(null);
       return;
     }
 
@@ -260,6 +286,7 @@ export function StudyPlannerApp() {
       .then(([nextProfile, nextSubjects, nextPlans, nextSessions, nextDashboard]) => {
         if (cancelled) return;
         setProfile(nextProfile);
+        setProfileDraft(nextProfile);
         setSubjects(nextSubjects);
         setPlans(nextPlans);
         setSessions(nextSessions);
@@ -380,7 +407,7 @@ export function StudyPlannerApp() {
     );
     if (saved) {
       setPlanEditingId(null);
-      setPlanDraft({ title: "", subjectId: "", deadline: "", priority: "medium", status: "pending", description: "" });
+      setPlanDraft({ title: "", subjectId: "", deadline: "", priority: "medium", status: "pending", description: "", phaseColor: "" });
     }
   }
 
@@ -393,6 +420,7 @@ export function StudyPlannerApp() {
       priority: plan.priority,
       status: plan.status,
       description: plan.description || "",
+      phaseColor: plan.project_id ? plan.phase_color || "#7563D9" : "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -429,18 +457,35 @@ export function StudyPlannerApp() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token || !profile) return;
-    await mutate(
-      () => apiRequest("/api/profile", {
+    if (!token || !profileDraft) return;
+    setPageError(null);
+    try {
+      const savedProfile = await apiRequest<Profile>("/api/profile", {
         method: "PATCH",
         token,
-        body: { name: profile.name, grade: profile.grade, studyGoals: profile.study_goals },
-      }),
-      "Profile updated",
-    );
+        body: {
+          name: profileDraft.name,
+          grade: profileDraft.grade,
+          studyGoals: profileDraft.study_goals,
+        },
+      });
+
+      // Only publish the draft to the rest of the interface after the server
+      // confirms the save. A failed request leaves every displayed value alone.
+      setProfile(savedProfile);
+      setProfileDraft(savedProfile);
+      setOptimizedPlans(null);
+      showFlash("Profile updated");
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "The profile could not be saved.");
+    }
   }
 
-  async function loadOptimizedPlans() {
+  async function toggleOptimizedPlans() {
+    if (optimizedPlans !== null) {
+      setOptimizedPlans(null);
+      return;
+    }
     if (!token) return;
     try {
       const result = await apiRequest<OptimizedPlan[]>("/api/plans/optimized", { token });
@@ -648,10 +693,14 @@ export function StudyPlannerApp() {
   if (!token) return <AuthScreen onAuthenticated={authenticated} />;
   if (!profile) return <LoadingScreen />;
   const currentProfile = profile;
+  const currentProfileDraft = profileDraft ?? currentProfile;
 
   function renderOverview() {
     const maxSubjectMinutes = Math.max(...dashboard.subjects.map((subject) => subject.total_minutes), 1);
     const visibleCalendarDays = calendarDays(calendarMonth);
+    const expandedDayPlans = expandedCalendarDay
+      ? plans.filter((plan) => planBelongsToCalendarDay(plan, expandedCalendarDay))
+      : [];
     const longTermValidationError = longTermSuggestion
       ? validateLongTermDraft(
           longTermSuggestion,
@@ -729,6 +778,7 @@ export function StudyPlannerApp() {
                   type="button"
                   onClick={() => {
                     const current = new Date();
+                    setExpandedCalendarDay(null);
                     setCalendarMonth(
                       new Date(current.getFullYear(), current.getMonth(), 1),
                     );
@@ -753,78 +803,151 @@ export function StudyPlannerApp() {
                 </button>
               </div>
             </header>
-            <div className="calendar-weekdays">
-              {weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}
-            </div>
-            <div className="calendar-grid">
-              {visibleCalendarDays.map((day) => {
-                const key = calendarDateKey(day);
-                const dayPlans = plans.filter((plan) => {
-                  // long projects are date ranges, so the same phase belongs to
-                  // every day between its start and end (not only the first day).
-                  if (plan.span_start && plan.span_end) {
-                    return key >= plan.span_start && key <= plan.span_end;
-                  }
-                  const calendarValue = plan.scheduled_start || plan.deadline;
-                  return calendarValue ? calendarDateKey(calendarValue) === key : false;
-                });
-                const isOutsideMonth = day.getMonth() !== calendarMonth.getMonth();
-                const isToday = key === calendarDateKey(new Date());
-                return (
-                  <div
-                    className={`calendar-day ${isOutsideMonth ? "outside" : ""} ${isToday ? "today" : ""}`}
-                    key={key}
-                  >
-                    <span className="calendar-day-number">{day.getDate()}</span>
-                    <div className="calendar-events">
-                      {dayPlans.slice(0, 2).map((plan) => {
-                        const isProjectPhase = Boolean(plan.span_start && plan.span_end);
-                        const isSpanStart = isProjectPhase &&
-                          (key === plan.span_start || day.getDay() === 0);
-                        const isSpanEnd = isProjectPhase &&
-                          (key === plan.span_end || day.getDay() === 6);
-                        const eventClass = isProjectPhase
-                          ? `project-span ${isSpanStart ? "span-start" : ""} ${isSpanEnd ? "span-end" : ""}`
-                          : plan.scheduled_start
-                            ? "scheduled"
-                            : "deadline";
-                        return (
+            <div className="calendar-table" aria-label="Monthly study calendar">
+              <div className="calendar-weekdays">
+                {weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}
+              </div>
+              <div className="calendar-grid">
+                {visibleCalendarDays.map((day) => {
+                  const key = calendarDateKey(day);
+                  const dayPlans = plans.filter((plan) => planBelongsToCalendarDay(plan, key));
+                  const isOutsideMonth = day.getMonth() !== calendarMonth.getMonth();
+                  const isToday = key === calendarDateKey(new Date());
+                  return (
+                    <div
+                      className={`calendar-day ${isOutsideMonth ? "outside" : ""} ${isToday ? "today" : ""}`}
+                      key={key}
+                    >
+                      <span className="calendar-day-number">{day.getDate()}</span>
+                      <div className="calendar-events">
+                        {dayPlans.slice(0, 2).map((plan) => {
+                          const isProjectPhase = Boolean(plan.span_start && plan.span_end);
+                          const isSpanStart = isProjectPhase &&
+                            (key === plan.span_start || day.getDay() === 0);
+                          const isSpanEnd = isProjectPhase &&
+                            (key === plan.span_end || day.getDay() === 6);
+                          const eventClass = isProjectPhase
+                            ? `project-span ${isSpanStart ? "span-start" : ""} ${isSpanEnd ? "span-end" : ""}`
+                            : plan.scheduled_start
+                              ? "scheduled"
+                              : "deadline";
+                          return (
+                            <button
+                              type="button"
+                              className={eventClass}
+                              key={plan.id}
+                              title={
+                                isProjectPhase
+                                  ? `${plan.project_title}: ${plan.title}`
+                                  : plan.title
+                              }
+                              style={
+                                isProjectPhase
+                                  ? ({ "--phase-color": plan.phase_color || "#7563D9" } as CSSProperties)
+                                  : undefined
+                              }
+                              onClick={() => {
+                                editPlan(plan);
+                                setActiveView("plans");
+                              }}
+                            >
+                              <span>
+                                {isProjectPhase
+                                  ? `P${plan.phase_order || ""}`
+                                  : plan.scheduled_start
+                                    ? timeLabel(plan.scheduled_start)
+                                    : "Due"}
+                              </span>
+                              {plan.title}
+                            </button>
+                          );
+                        })}
+                        {dayPlans.length > 2 ? (
                           <button
                             type="button"
-                            className={eventClass}
-                            key={plan.id}
-                            title={
-                              isProjectPhase
-                                ? `${plan.project_title}: ${plan.title}`
-                                : plan.title
-                            }
-                            style={
-                              isProjectPhase
-                                ? ({ "--phase-color": plan.phase_color || "#7563D9" } as CSSProperties)
-                                : undefined
-                            }
-                            onClick={() => {
-                              editPlan(plan);
-                              setActiveView("plans");
-                            }}
+                            className="calendar-more-button"
+                            aria-haspopup="dialog"
+                            aria-expanded={expandedCalendarDay === key}
+                            onClick={() => setExpandedCalendarDay(key)}
                           >
-                            <span>
-                              {isProjectPhase
-                                ? `P${plan.phase_order || ""}`
-                                : plan.scheduled_start
-                                  ? timeLabel(plan.scheduled_start)
-                                  : "Due"}
-                            </span>
-                            {plan.title}
+                            +{dayPlans.length - 2} more
                           </button>
-                        );
-                      })}
-                      {dayPlans.length > 2 ? <small>+{dayPlans.length - 2} more</small> : null}
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
+
+            {expandedCalendarDay ? (
+              <div
+                className="calendar-more-backdrop"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) setExpandedCalendarDay(null);
+                }}
+              >
+                <section
+                  aria-labelledby="calendar-more-title"
+                  aria-modal="true"
+                  className="calendar-more-dialog"
+                  role="dialog"
+                >
+                  <header>
+                    <div>
+                      <p>Tasks for</p>
+                      <h3 id="calendar-more-title">
+                        {new Date(`${expandedCalendarDay}T12:00:00`).toLocaleDateString(undefined, {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Close tasks popup"
+                      autoFocus
+                      className="calendar-more-close"
+                      onClick={() => setExpandedCalendarDay(null)}
+                    >
+                      ×
+                    </button>
+                  </header>
+                  <div className="calendar-more-list">
+                    {expandedDayPlans.map((plan) => {
+                      const isProjectPhase = Boolean(plan.span_start && plan.span_end);
+                      const timing = isProjectPhase
+                        ? `Phase ${plan.phase_order || ""}`.trim()
+                        : plan.scheduled_start
+                          ? timeLabel(plan.scheduled_start)
+                          : "Due today";
+                      return (
+                        <button
+                          type="button"
+                          key={plan.id}
+                          className={isProjectPhase ? "project-phase" : ""}
+                          style={
+                            isProjectPhase
+                              ? ({ "--phase-color": plan.phase_color || "#7563D9" } as CSSProperties)
+                              : undefined
+                          }
+                          onClick={() => {
+                            setExpandedCalendarDay(null);
+                            editPlan(plan);
+                            setActiveView("plans");
+                          }}
+                        >
+                          <span>{timing}</span>
+                          <strong>{plan.title}</strong>
+                          <small>{plan.subject_name || plan.project_title || "General"}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+            ) : null}
           </article>
 
           <aside className="kimi-scheduler">
@@ -1303,10 +1426,32 @@ export function StudyPlannerApp() {
               <label><span>Deadline</span><small className="field-help">Leave it empty only when there is really no due date.</small><input type="date" value={planDraft.deadline} onChange={(event) => setPlanDraft({ ...planDraft, deadline: event.target.value })} /></label>
               <label><span>Priority</span><small className="field-help">High means it should appear earlier when the queue is optimized.</small><select value={planDraft.priority} onChange={(event) => setPlanDraft({ ...planDraft, priority: event.target.value })}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
               <label><span>Status</span><small className="field-help">Update this when you start or finish the work.</small><select value={planDraft.status} onChange={(event) => setPlanDraft({ ...planDraft, status: event.target.value })}><option value="pending">To do</option><option value="in_progress">In progress</option><option value="completed">Completed</option></select></label>
+              {planEditingId && planDraft.phaseColor ? (
+                <label className="span-2 plan-color-field">
+                  <span>Phase color</span>
+                  <small className="field-help">This is the color used for this phase across every day of its calendar block.</small>
+                  <div className="plan-color-control" style={{ "--phase-color": planDraftPreviewColor } as CSSProperties}>
+                    <input
+                      aria-label="Phase color"
+                      type="color"
+                      value={planDraftPreviewColor}
+                      onChange={(event) => setPlanDraft({ ...planDraft, phaseColor: event.target.value.toUpperCase() })}
+                    />
+                    <input
+                      aria-label="Phase color hex value"
+                      type="text"
+                      maxLength={7}
+                      pattern="#[0-9a-fA-F]{6}"
+                      value={planDraft.phaseColor}
+                      onChange={(event) => setPlanDraft({ ...planDraft, phaseColor: event.target.value.toUpperCase() })}
+                    />
+                  </div>
+                </label>
+              ) : null}
               <label className="span-2"><span>Notes</span><small className="field-help">Add the success condition, materials or another detail that you may forget later.</small><textarea rows={3} value={planDraft.description} onChange={(event) => setPlanDraft({ ...planDraft, description: event.target.value })} placeholder="What does finished look like?" /></label>
             </div>
             <div className="form-actions">
-              {planEditingId ? <button type="button" className="button button-ghost" onClick={() => { setPlanEditingId(null); setPlanDraft({ title: "", subjectId: "", deadline: "", priority: "medium", status: "pending", description: "" }); }}>Cancel</button> : null}
+              {planEditingId ? <button type="button" className="button button-ghost" onClick={() => { setPlanEditingId(null); setPlanDraft({ title: "", subjectId: "", deadline: "", priority: "medium", status: "pending", description: "", phaseColor: "" }); }}>Cancel</button> : null}
               <button className="button button-primary">{planEditingId ? "Save these changes" : "Add this plan"}</button>
             </div>
           </form>
@@ -1316,7 +1461,7 @@ export function StudyPlannerApp() {
             <p className="eyebrow">Optional automatic order</p>
             <h2>Compare priority and deadline</h2>
             <p>This button does not change or delete any plan. It only scores unfinished work using the priority you selected and how close the deadline is, then shows a suggested order below.</p>
-            <button className="button button-dark button-full" onClick={() => void loadOptimizedPlans()}>Show the suggested order</button>
+            <button className="button button-dark button-full" onClick={() => void toggleOptimizedPlans()}>{optimizedPlans !== null ? "Turn off" : "Show the suggested order"}</button>
             {optimizedPlans ? (
               <div className="optimization-results">
                 {optimizedPlans.length ? optimizedPlans.slice(0, 4).map((plan, index) => (
@@ -1334,7 +1479,7 @@ export function StudyPlannerApp() {
               {plans.map((plan) => (
                 <article className={`plan-row ${plan.status === "completed" ? "is-complete" : ""}`} key={plan.id}>
                   <button className={`completion-toggle ${plan.status === "completed" ? "checked" : ""}`} aria-label="Toggle completion" onClick={() => token && void mutate(() => apiRequest(`/api/plans/${plan.id}`, { method: "PATCH", token, body: { status: plan.status === "completed" ? "pending" : "completed" } }), plan.status === "completed" ? "Plan reopened" : "Plan completed")}>{plan.status === "completed" ? "✓" : ""}</button>
-                  <div className="plan-main"><div><span className={`priority-label ${plan.priority}`}>{plan.priority}</span><span className="status-label">{plan.status.replace("_", " ")}</span></div><h3>{plan.title}</h3><p>{plan.subject_name || "General"}{plan.description ? ` · ${plan.description}` : ""}</p></div>
+                  <div className="plan-main"><div><span className={`priority-label ${plan.priority}`}>{plan.priority}</span><span className="status-label">{plan.status.replace("_", " ")}</span>{plan.phase_color ? <span className="phase-color-label" style={{ "--phase-color": plan.phase_color } as CSSProperties}>Phase {plan.phase_order || ""}</span> : null}</div><h3>{plan.title}</h3><p>{plan.subject_name || "General"}{plan.description ? ` · ${plan.description}` : ""}</p></div>
                   <div className="plan-deadline"><span>Deadline</span><strong>{dateLabel(plan.deadline)}</strong></div>
                   <div className="row-actions"><button onClick={() => editPlan(plan)}>Edit</button><button className="danger-link" onClick={() => token && void mutate(() => apiRequest(`/api/plans/${plan.id}`, { method: "DELETE", token }), "Plan deleted")}>Delete</button></div>
                 </article>
@@ -1383,7 +1528,7 @@ export function StudyPlannerApp() {
             <p className="timer-help">Choose the subject before starting. Pause keeps the current time. Stop &amp; save writes the completed minutes into the study log.</p>
             <div className="timer-actions">
               <button className="button button-light" disabled={!timerSubjectId} onClick={() => setTimerRunning((value) => !value)}>{timerRunning ? "Pause" : timerSeconds ? "Resume" : "Start focus"}</button>
-              {timerSeconds ? <button className="button button-outline-light" onClick={() => void stopTimer()}>Stop & save</button> : null}
+              {timerSeconds ? <button className="button button-outline-light timer-stop-button" onClick={() => void stopTimer()}>Stop & save</button> : null}
             </div>
           </article>
           <form className="panel editor-card" onSubmit={submitSession}>
@@ -1414,10 +1559,10 @@ export function StudyPlannerApp() {
           <form className="panel editor-card" onSubmit={saveProfile}>
             <div className="panel-heading"><div><p className="eyebrow">Editable student information</p><h2>Profile and goals</h2></div></div>
             <div className="form-grid profile-form">
-              <label><span>Name</span><small className="field-help">This is used in the greeting and the profile card.</small><input value={currentProfile.name} onChange={(event) => setProfile({ ...currentProfile, name: event.target.value })} required /></label>
+              <label><span>Name</span><small className="field-help">This is used in the greeting and the profile card.</small><input value={currentProfileDraft.name} onChange={(event) => setProfileDraft({ ...currentProfileDraft, name: event.target.value })} required /></label>
               <label><span>Email</span><small className="field-help">The account email cannot be changed from this page.</small><input value={currentProfile.email} disabled /></label>
-              <label className="span-2"><span>Grade / year</span><small className="field-help">For example IB DP1 or IB DP2. Kimi can use this to make advice closer to your course stage.</small><input value={currentProfile.grade || ""} onChange={(event) => setProfile({ ...currentProfile, grade: event.target.value })} placeholder="IB DP2" /></label>
-              <label className="span-2"><span>Study goals</span><small className="field-help">Write concrete goals, weak areas or limits. Kimi receives this text with chat questions, so details here can improve the answer.</small><textarea rows={6} value={currentProfile.study_goals || ""} onChange={(event) => setProfile({ ...currentProfile, study_goals: event.target.value })} placeholder="For example: improve Biology data analysis and finish the EE draft before October." /></label>
+              <label className="span-2"><span>Grade / year</span><small className="field-help">For example IB DP1 or IB DP2. Kimi can use this to make advice closer to your course stage.</small><input value={currentProfileDraft.grade || ""} onChange={(event) => setProfileDraft({ ...currentProfileDraft, grade: event.target.value })} placeholder="IB DP2" /></label>
+              <label className="span-2"><span>Study goals</span><small className="field-help">Write concrete goals, weak areas or limits. Kimi receives this text with chat questions, so details here can improve the answer.</small><textarea rows={6} value={currentProfileDraft.study_goals || ""} onChange={(event) => setProfileDraft({ ...currentProfileDraft, study_goals: event.target.value })} placeholder="For example: improve Biology data analysis and finish the EE draft before October." /></label>
             </div>
             <div className="form-actions"><button className="button button-primary">Save my profile information</button></div>
           </form>

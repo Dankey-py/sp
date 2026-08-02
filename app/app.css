@@ -183,19 +183,20 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .calendar-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
 .calendar-heading h2 { margin: 0; font-size: 22px; letter-spacing: -.035em; }
 .calendar-controls { display: flex; align-items: center; gap: 5px; }
-.calendar-controls button { min-width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fb; color: #625e68; font-size: 10px; font-weight: 750; }
+.calendar-controls button { min-width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fb; color: #625e68; padding-inline: 10px; font-size: 16px; font-weight: 750; }
 .calendar-controls button:hover { border-color: #c9c0ed; color: var(--purple); }
+.calendar-table { overflow-x: auto; }
 .calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .calendar-weekdays { border: 1px solid var(--line); border-bottom: 0; border-radius: 12px 12px 0 0; background: #f7f4f8; }
-.calendar-weekdays span { padding: 9px 6px; color: #8a858f; text-align: center; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.calendar-weekdays span { padding: 11px 6px; color: #8a858f; text-align: center; font-size: 16px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .calendar-grid { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
-.calendar-day { min-width: 0; min-height: 94px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: white; padding: 7px; }
+.calendar-day { min-width: 0; min-height: 142px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: white; padding: 8px; }
 .calendar-day.outside { background: #faf9f7; color: #bcb7c0; }
-.calendar-day-number { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 8px; font-size: 9px; font-weight: 750; }
+.calendar-day-number { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; font-size: 16px; font-weight: 750; }
 .calendar-day.today .calendar-day-number { background: var(--purple); color: white; }
-.calendar-events { display: grid; min-width: 0; gap: 4px; margin-top: 4px; }
-.calendar-events button { display: block; min-width: 0; overflow: hidden; border: 0; border-radius: 6px; padding: 5px 6px; background: var(--purple-soft); color: #5141a1; text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; font-weight: 700; }
-.calendar-events button span { margin-right: 4px; color: #7b6ec3; font-size: 7px; font-weight: 850; }
+.calendar-events { display: grid; min-width: 0; gap: 5px; margin-top: 5px; }
+.calendar-events button { display: block; min-width: 0; overflow: hidden; border: 0; border-radius: 6px; padding: 6px 7px; background: var(--purple-soft); color: #5141a1; text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 700; line-height: 1.25; }
+.calendar-events button span { margin-right: 4px; color: #7b6ec3; font-size: 16px; font-weight: 850; }
 .calendar-events button.deadline { background: #fff0e8; color: #a05d3b; }
 .calendar-events button.deadline span { color: #c1764d; }
 .calendar-events button.project-span { --phase-color: #7563d9; position: relative; z-index: 1; border-left: 3px solid var(--phase-color); border-radius: 0; background: color-mix(in srgb, var(--phase-color) 18%, white); color: color-mix(in srgb, var(--phase-color) 72%, #16131c); }
@@ -205,7 +206,24 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .calendar-events button.project-span.span-start { border-radius: 7px 0 0 7px; }
 .calendar-events button.project-span.span-end { border-radius: 0 7px 7px 0; }
 .calendar-events button.project-span.span-start.span-end { border-radius: 7px; }
-.calendar-events small { color: #928d97; font-size: 7px; }
+.calendar-events .calendar-more-button { border: 1px dashed #c8c8c8; background: transparent; color: #555555; font-size: 16px; text-align: center; }
+.calendar-events .calendar-more-button:hover { border-color: #777777; background: #f2f2f2; color: #202020; }
+.calendar-more-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; background: rgba(18, 18, 18, .35); padding: 18px; }
+.calendar-more-dialog { width: min(440px, 100%); max-height: min(620px, calc(100vh - 36px)); overflow: hidden; border: 1px solid #cfcfcf; border-radius: 10px; background: white; box-shadow: 0 24px 70px rgba(0,0,0,.22); }
+.calendar-more-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); padding: 20px; }
+.calendar-more-dialog > header p { margin: 0 0 4px; color: var(--muted); font-size: 16px; }
+.calendar-more-dialog > header h3 { margin: 0; font-size: 22px; line-height: 1.2; }
+.calendar-more-close { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); font-size: 24px; line-height: 1; }
+.calendar-more-close:hover { background: #eeeeee; }
+.calendar-more-list { display: grid; gap: 8px; max-height: 480px; overflow-y: auto; padding: 14px; }
+.calendar-more-list > button { --phase-color: #777777; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 12px; border: 1px solid var(--line); border-left: 4px solid #777777; border-radius: 7px; background: #fafafa; padding: 13px 14px; color: var(--ink); text-align: left; }
+.calendar-more-list > button.project-phase { border-left-color: var(--phase-color); background: color-mix(in srgb, var(--phase-color) 10%, white); }
+.calendar-more-list > button:hover { border-color: #888888; border-left-color: #333333; background: #f0f0f0; }
+.calendar-more-list > button.project-phase:hover { border-left-color: var(--phase-color); }
+.calendar-more-list > button span { grid-row: 1 / 3; align-self: center; min-width: 75px; color: #666666; font-size: 16px; font-weight: 750; }
+.calendar-more-list > button strong,
+.calendar-more-list > button small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.calendar-more-list > button small { color: var(--muted); }
 .kimi-scheduler { overflow: hidden; border-radius: 18px; background: var(--navy); padding: 25px; color: white; box-shadow: var(--shadow); }
 .kimi-scheduler > header { display: flex; align-items: flex-start; gap: 13px; }
 .kimi-scheduler .assistant-orb { width: 39px; height: 39px; flex: 0 0 auto; margin: 0; }
@@ -268,6 +286,10 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .plan-list { display: grid; }
 .plan-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 85px auto; align-items: center; gap: 16px; border-top: 1px solid #efecf1; padding: 17px 0; }
 .plan-row:first-child { border-top: 0; }
+.plan-color-control { --phase-color: #7563d9; display: grid; grid-template-columns: 76px auto; align-items: center; gap: 10px; }
+.plan-color-control input[type="color"] { width: 76px; min-height: 42px; border: 1px solid #c8c8c8; background: white; padding: 3px; }
+.plan-color-control input[type="text"] { border-left: 5px solid var(--phase-color); background: color-mix(in srgb, var(--phase-color) 16%, white); color: #333333; font-family: "Times New Roman", Times, serif; font-size: 11px; }
+.phase-color-label { border-left: 4px solid var(--phase-color); background: color-mix(in srgb, var(--phase-color) 16%, white); padding: 4px 7px; color: #333333; font-size: 8px; font-weight: 700; text-transform: uppercase; }
 .completion-toggle { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid #d8d3dc; border-radius: 8px; background: white; color: white; font-size: 11px; }
 .completion-toggle.checked { border-color: var(--purple); background: var(--purple); }
 .plan-main { min-width: 0; }
@@ -458,13 +480,9 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
   .assistant-intro { padding: 30px 24px; }
   .calendar-panel { padding: 15px 10px; }
   .calendar-heading { align-items: flex-start; flex-direction: column; }
-  .calendar-day { min-height: 70px; padding: 4px 3px; }
-  .calendar-day-number { width: 19px; height: 19px; font-size: 8px; }
-  .calendar-events button { padding: 4px 3px; font-size: 7px; }
-  .calendar-events button span { display: none; }
-  .calendar-events button.project-span:not(.span-start) { margin-left: -3px; padding-left: 5px; }
-  .calendar-events button.project-span:not(.span-end) { margin-right: -3px; }
-  .calendar-weekdays span { padding-inline: 2px; font-size: 7px; }
+  .calendar-table > .calendar-weekdays,
+  .calendar-table > .calendar-grid { min-width: 780px; }
+  .calendar-day { min-height: 142px; }
   .kimi-scheduler { padding: 22px 18px; }
   .scheduler-form-row { grid-template-columns: 1fr; }
   .phase-editor-row { grid-template-columns: 1fr; }
@@ -473,17 +491,6 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 /* minimalist grayscale pass
    keeping this at the end makes it easy to remove without touching any app logic. */
 :root {
-  --ink: #202020;
-  --muted: #707070;
-  --line: #d9d9d9;
-  --paper: #f5f5f5;
-  --panel: #ffffff;
-  --purple: #333333;
-  --purple-dark: #171717;
-  --purple-soft: #eeeeee;
-  --navy: #e8e8e8;
-  --mint: #eeeeee;
-  --peach: #e4e4e4;
   --shadow: none;
   font-family: "Times New Roman", Times, serif;
 }
@@ -639,12 +646,15 @@ input:disabled { background: #ededed; color: #888888; }
 .calendar-events button span,
 .calendar-events button.deadline span { color: #666666; }
 .calendar-events button.project-span {
-  filter: grayscale(1);
-  border-left-color: #555555;
-  background: #dedede;
-  color: #2f2f2f;
+  /* The inline --phase-color belongs to the approved phase. These declarations
+     intentionally come after the plain theme so a fixed grey cannot win the
+     cascade and hide the student's selection. */
+  filter: none;
+  border-left-color: var(--phase-color);
+  background: color-mix(in srgb, var(--phase-color) 18%, white);
+  color: color-mix(in srgb, var(--phase-color) 72%, #161616);
 }
-.calendar-events button.project-span span { color: #555555; }
+.calendar-events button.project-span span { color: var(--phase-color); }
 .kimi-scheduler {
   border: 1px solid #cecece;
   border-radius: 7px;
@@ -669,8 +679,15 @@ input:disabled { background: #ededed; color: #888888; }
 .approval-heading span { color: #444444; }
 .schedule-suggestion blockquote { border-left-color: #999999; color: #555555; }
 .approval-heading strong { background: #e8e8e8; color: #444444; }
-.phase-editor { filter: grayscale(1); border-radius: 5px; box-shadow: none; }
-.phase-editor > header > span { color: #555555; }
+.phase-editor {
+  /* Do not grayscale this container: filter affects all descendants after
+     inheritance and would visually erase even a correct inline custom color. */
+  filter: none;
+  border-left-color: var(--phase-color);
+  border-radius: 5px;
+  box-shadow: none;
+}
+.phase-editor > header > span { color: var(--phase-color); }
 .phase-delete { color: #555555; text-decoration: underline; }
 .add-phase-button { border-color: #bcbcbc; border-radius: 4px; color: #444444; }
 
@@ -749,7 +766,6 @@ input:disabled { background: #ededed; color: #888888; }
 *::after {
   border-radius: 0 !important;
   box-shadow: none !important;
-  background-image: none !important;
 }
 
 .field-help {
@@ -863,4 +879,74 @@ a:focus-visible {
 .progress-track i,
 .subject-bar i {
   background: #000000;
+}
+
+.timer-card .timer-stop-button {
+  border: 2px solid #ffffff;
+  background: #1f1f1f;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.timer-card .timer-stop-button:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #000000;
+}
+
+.timer-card .timer-stop-button:focus-visible {
+  outline-color: #ffffff;
+}
+
+/* Apply the photo to the real page canvas. The light gradient keeps text
+   readable while allowing the image to remain clearly visible. */
+html,
+body {
+  min-height: 100%;
+  background-color: #b9b2ae;
+  background-image:
+    linear-gradient(rgba(245, 245, 245, .52), rgba(245, 245, 245, .52)),
+    url("/study-background.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.app-shell,
+.workspace {
+  background: transparent;
+}
+
+.sidebar {
+  background: rgba(245, 245, 245, .88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.topbar,
+.mobile-nav {
+  background: rgba(248, 248, 248, .86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.auth-page {
+  background: rgba(245, 245, 245, .38);
+}
+
+.auth-panel,
+.loading-screen {
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+@media (max-width: 800px) {
+  html,
+  body {
+    background-image:
+      linear-gradient(rgba(245, 245, 245, .64), rgba(245, 245, 245, .64)),
+      url("/study-background.jpg");
+  }
 }
