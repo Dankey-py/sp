@@ -87,7 +87,7 @@ export function AuthScreen({
           <h1>Keep the school work in one simple place.</h1>
           <p>
             I made this page because deadlines can become messy very fast. Put the
-            subjects, tasks, real study time and Kimi help here, then check what is
+            subjects, tasks, real study time and the Kimi task agent here, then check what is
             actually important now.
           </p>
         </div>

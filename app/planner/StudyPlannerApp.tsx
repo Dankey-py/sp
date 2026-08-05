@@ -41,7 +41,7 @@ const navigation: Array<{ id: AppView; label: string; icon: string }> = [
   { id: "plans", label: "Study plans", icon: "✓" },
   { id: "subjects", label: "Subjects", icon: "◇" },
   { id: "sessions", label: "Study sessions", icon: "◷" },
-  { id: "assistant", label: "Kimi coach", icon: "✦" },
+  { id: "assistant", label: "Kimi task agent", icon: "✦" },
   { id: "profile", label: "Profile", icon: "○" },
 ];
 
@@ -831,16 +831,23 @@ export function StudyPlannerApp() {
                             : plan.scheduled_start
                               ? "scheduled"
                               : "deadline";
+                          const isCompleted = plan.status === "completed";
+                          const isInProgress = plan.status === "in_progress";
+                          const eventTitle = isProjectPhase
+                            ? `${plan.project_title}: ${plan.title}`
+                            : plan.title;
+                          const statusTitle = isCompleted
+                            ? `Finished: ${eventTitle}`
+                            : isInProgress
+                              ? `In progress: ${eventTitle}`
+                              : eventTitle;
                           return (
                             <button
                               type="button"
-                              className={eventClass}
+                              className={`${eventClass} ${isCompleted ? "is-completed" : isInProgress ? "is-in-progress" : ""}`}
                               key={plan.id}
-                              title={
-                                isProjectPhase
-                                  ? `${plan.project_title}: ${plan.title}`
-                                  : plan.title
-                              }
+                              aria-label={statusTitle}
+                              title={statusTitle}
                               style={
                                 isProjectPhase
                                   ? ({ "--phase-color": plan.phase_color || "#7563D9" } as CSSProperties)
@@ -917,6 +924,8 @@ export function StudyPlannerApp() {
                   <div className="calendar-more-list">
                     {expandedDayPlans.map((plan) => {
                       const isProjectPhase = Boolean(plan.span_start && plan.span_end);
+                      const isCompleted = plan.status === "completed";
+                      const isInProgress = plan.status === "in_progress";
                       const timing = isProjectPhase
                         ? `Phase ${plan.phase_order || ""}`.trim()
                         : plan.scheduled_start
@@ -926,7 +935,8 @@ export function StudyPlannerApp() {
                         <button
                           type="button"
                           key={plan.id}
-                          className={isProjectPhase ? "project-phase" : ""}
+                          className={`${isProjectPhase ? "project-phase" : ""} ${isCompleted ? "is-completed" : isInProgress ? "is-in-progress" : ""}`}
+                          aria-label={isCompleted ? `Finished: ${plan.title}` : isInProgress ? `In progress: ${plan.title}` : plan.title}
                           style={
                             isProjectPhase
                               ? ({ "--phase-color": plan.phase_color || "#7563D9" } as CSSProperties)
@@ -1406,7 +1416,7 @@ export function StudyPlannerApp() {
           <section className="attention-card">
             <span>!</span>
             <div><p className="eyebrow">Maybe check this before the other subjects</p><h3>{dashboard.weakSubjects.map((subject) => subject.name).join(", ")}</h3><p>The saved study time is lower than your average, or there are several unfinished tasks. This is only a reminder, not a judgement of your grade.</p></div>
-            <button className="button button-light" onClick={() => setActiveView("assistant")}>Ask Kimi what to do</button>
+            <button className="button button-light" onClick={() => setActiveView("plans")}>Review saved tasks</button>
           </section>
         ) : null}
       </div>
@@ -1571,14 +1581,31 @@ export function StudyPlannerApp() {
     );
   }
 
-  const activeContent = activeView === "overview" ? renderOverview() : activeView === "plans" ? renderPlans() : activeView === "subjects" ? renderSubjects() : activeView === "sessions" ? renderSessions() : activeView === "assistant" ? <AssistantPanel token={token} /> : renderProfile();
+  const activeContent = activeView === "overview" ? renderOverview() : activeView === "plans" ? renderPlans() : activeView === "subjects" ? renderSubjects() : activeView === "sessions" ? renderSessions() : activeView === "assistant" ? (
+    <AssistantPanel
+      token={token}
+      subjects={subjects}
+      onPlannerChanged={refreshData}
+      onOpenCalendar={(deadline) => {
+        if (deadline) {
+          const date = new Date(`${deadline.slice(0, 10)}T12:00:00`);
+          if (!Number.isNaN(date.getTime())) {
+            setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+            setExpandedCalendarDay(calendarDateKey(date));
+          }
+        }
+        setActiveView("overview");
+      }}
+      onOpenPlans={() => setActiveView("plans")}
+    />
+  ) : renderProfile();
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">S</span><span>StudyOS</span></div>
         <nav>{navigation.map((item) => <button key={item.id} className={activeView === item.id ? "active" : ""} onClick={() => setActiveView(item.id)}><span>{item.icon}</span>{item.label}{item.id === "plans" && dashboard.openTasks ? <b>{dashboard.openTasks}</b> : null}</button>)}</nav>
-        <div className="sidebar-coach"><span>✦</span><strong>Not sure what to do next?</strong><p>Kimi can read the saved subjects, goals and deadlines, then explain a possible next step.</p><button onClick={() => setActiveView("assistant")}>Open the Kimi chat →</button></div>
+        <div className="sidebar-coach"><span>✦</span><strong>Need to manage a task?</strong><p>Kimi can query, add, update or delete planner tasks. It cannot perform other actions.</p><button onClick={() => setActiveView("assistant")}>Open the task agent →</button></div>
         <button className="sidebar-profile" onClick={() => setActiveView("profile")}><span>{currentProfile.name.slice(0, 2).toUpperCase()}</span><div><strong>{currentProfile.name}</strong><small>{currentProfile.grade || "IB student"}</small></div><b>›</b></button>
       </aside>
 
@@ -1586,7 +1613,7 @@ export function StudyPlannerApp() {
         <header className="topbar">
           <div className="mobile-brand brand"><span className="brand-mark">S</span><span>StudyOS</span></div>
           <div className="backend-status"><i /> Data connected to SQLite</div>
-          <div className="topbar-actions"><button className="icon-button" aria-label="Open Kimi coach" onClick={() => setActiveView("assistant")}>✦</button><button className="button button-ghost button-small" onClick={() => void logout()}>Sign out</button></div>
+          <div className="topbar-actions"><button className="icon-button" aria-label="Open Kimi task agent" onClick={() => setActiveView("assistant")}>✦</button><button className="button button-ghost button-small" onClick={() => void logout()}>Sign out</button></div>
         </header>
         <nav className="mobile-nav">{navigation.map((item) => <button key={item.id} className={activeView === item.id ? "active" : ""} onClick={() => setActiveView(item.id)}><span>{item.icon}</span>{item.label}</button>)}</nav>
         <div className="workspace-content">

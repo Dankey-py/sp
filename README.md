@@ -20,8 +20,10 @@ for contextual study coaching.
   measurable, color-coded phases. Phases stay as drafts until the student
   approves them, then appear as multi-day calendar ranges.
 - Contextual Kimi conversations that include the student's subjects, goals, and
-  current plans. Answers use real SSE streaming, so each new piece appears in
-  the chat while Kimi is still writing instead of waiting for the full reply.
+  current plans. Conversation messages are saved per account in SQLite and
+  restored after refresh. Answers use real SSE streaming, so each new piece
+  appears in the chat while Kimi is still writing instead of waiting for the
+  full reply.
 - Responsive desktop, tablet, and mobile layouts.
 
 ## Local development

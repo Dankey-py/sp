@@ -6,7 +6,7 @@ export function meta({}: Route.MetaArgs) {
     { title: "StudyOS · IB Study Manager" },
     {
       name: "description",
-      content: "Plan IB deadlines, track study sessions and get contextual help from Kimi.",
+      content: "Plan IB deadlines, track study sessions and manage planner tasks with Kimi.",
     },
   ];
 }

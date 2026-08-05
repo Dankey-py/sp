@@ -123,7 +123,7 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .view-stack { display: grid; gap: 24px; }
 .page-heading { max-width: 710px; padding: 10px 0 6px; }
 .page-heading h1, .welcome-strip h1 { margin: 0; font-size: clamp(35px, 4vw, 49px); line-height: 1.04; letter-spacing: -.055em; }
-.page-heading > p:last-child, .welcome-strip > div > p:last-child { max-width: 650px; margin: 13px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.page-heading > p:last-child, .welcome-strip > div > p:last-child { max-width: 650px; margin: 13px 0 0; color: #000000; font-size: 14px; line-height: 1.7; font-weight: bold}
 .panel { border: 1px solid var(--line); border-radius: 17px; background: var(--panel); padding: 24px; box-shadow: 0 10px 34px rgba(40,34,52,.035); }
 .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 23px; }
 .panel-heading h2, .editor-card h2, .optimization-card h2, .programme-note h2 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
@@ -206,6 +206,10 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .calendar-events button.project-span.span-start { border-radius: 7px 0 0 7px; }
 .calendar-events button.project-span.span-end { border-radius: 0 7px 7px 0; }
 .calendar-events button.project-span.span-start.span-end { border-radius: 7px; }
+.calendar-events button.is-completed { position: relative; padding-right: 34px; opacity: .72; }
+.calendar-events button.is-completed::after { content: "×"; position: absolute; top: 50%; right: 6px; display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid currentColor; background: white; color: #111111; font-size: 20px; font-weight: 800; line-height: 1; transform: translateY(-50%); }
+.calendar-events button.is-in-progress { position: relative; padding-right: 34px; }
+.calendar-events button.is-in-progress::after { content: "↻"; position: absolute; top: 50%; right: 6px; display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid currentColor; background: white; color: #111111; font-size: 17px; font-weight: 800; line-height: 1; transform: translateY(-50%); }
 .calendar-events .calendar-more-button { border: 1px dashed #c8c8c8; background: transparent; color: #555555; font-size: 16px; text-align: center; }
 .calendar-events .calendar-more-button:hover { border-color: #777777; background: #f2f2f2; color: #202020; }
 .calendar-more-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; background: rgba(18, 18, 18, .35); padding: 18px; }
@@ -220,6 +224,11 @@ input:disabled { background: #f0edf2; color: #9a96a0; }
 .calendar-more-list > button.project-phase { border-left-color: var(--phase-color); background: color-mix(in srgb, var(--phase-color) 10%, white); }
 .calendar-more-list > button:hover { border-color: #888888; border-left-color: #333333; background: #f0f0f0; }
 .calendar-more-list > button.project-phase:hover { border-left-color: var(--phase-color); }
+.calendar-more-list > button.is-completed { position: relative; padding-right: 52px; opacity: .72; }
+.calendar-more-list > button.is-completed::after { content: "×"; position: absolute; top: 50%; right: 14px; display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid #333333; background: white; color: #111111; font-size: 22px; font-weight: 800; line-height: 1; transform: translateY(-50%); }
+.calendar-more-list > button.is-completed strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+.calendar-more-list > button.is-in-progress { position: relative; padding-right: 52px; }
+.calendar-more-list > button.is-in-progress::after { content: "↻"; position: absolute; top: 50%; right: 14px; display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid #333333; background: white; color: #111111; font-size: 19px; font-weight: 800; line-height: 1; transform: translateY(-50%); }
 .calendar-more-list > button span { grid-row: 1 / 3; align-self: center; min-width: 75px; color: #666666; font-size: 16px; font-weight: 750; }
 .calendar-more-list > button strong,
 .calendar-more-list > button small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
@@ -871,6 +880,17 @@ a:focus-visible {
 .assistant-prompts button:hover { background: #242424; }
 .assistant-prompts span { color: #ffffff; }
 
+.agent-scope-card {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 24px;
+  border: 1px solid #5f5f5f;
+  background: #151515;
+  padding: 13px;
+}
+.agent-scope-card strong { font-size: 12px; }
+.agent-scope-card p { margin: 0; color: #c9c9c9; font-size: 10px; line-height: 1.5; }
+
 .progress-track,
 .subject-bar {
   overflow: hidden;
@@ -942,6 +962,94 @@ body {
   -webkit-backdrop-filter: blur(18px);
 }
 
+.chat-task-tools {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  border-top: 1px solid #cccccc;
+  padding-top: 12px;
+}
+
+.chat-task-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #222222;
+  background: #ffffff;
+  padding: 10px 12px;
+  color: #111111;
+  font: inherit;
+  font-weight: 700;
+}
+
+.chat-task-tools button:hover:not(:disabled) { background: #e4e4e4; }
+.chat-task-tools small { color: #666666; font-size: 10px; line-height: 1.45; }
+
+.chat-task-card {
+  width: min(540px, 68vw);
+  margin-top: 14px;
+  border: 1px solid #999999;
+  background: #ffffff;
+  padding: 16px;
+  color: #222222;
+}
+
+.chat-task-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #dddddd;
+  padding-bottom: 12px;
+}
+
+.chat-task-card > header > div { display: grid; gap: 2px; }
+.chat-task-card > header strong { font-size: 14px; }
+.chat-task-card > header span { color: #666666; font-size: 10px; }
+.chat-task-badge { border: 1px solid #bbbbbb; background: #eeeeee; padding: 4px 7px; white-space: nowrap; }
+.chat-task-badge.is-delete { border-color: #7a1f1f; background: #fff0f0; color: #7a1f1f; }
+.chat-task-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 14px; }
+.chat-task-grid label { display: grid; gap: 5px; }
+.chat-task-grid label > span { color: #555555; font-size: 10px; font-weight: 700; }
+.chat-task-grid .span-2 { grid-column: 1 / -1; }
+.chat-task-grid input,
+.chat-task-grid select,
+.chat-task-grid textarea {
+  width: 100%;
+  border: 1px solid #bbbbbb;
+  background: #ffffff;
+  padding: 9px 10px;
+  color: #222222;
+  font: inherit;
+  font-size: 12px;
+}
+.chat-task-grid textarea { resize: vertical; }
+.chat-task-card > p { margin: 12px 0 0; color: #666666; font-size: 10px; }
+.chat-task-delete-summary { display: grid; gap: 5px; margin-top: 14px; border-left: 3px solid #7a1f1f; background: #fff4f4; padding: 12px; }
+.chat-task-delete-summary > strong { font-size: 13px; }
+.chat-task-delete-summary > span { color: #555555; font-size: 10px; }
+.chat-task-delete-summary > p { margin: 5px 0 0; color: #7a1f1f; font-size: 10px; font-weight: 700; }
+.chat-task-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.chat-task-actions > button { border: 1px solid #333333; background: #ffffff; padding: 9px 11px; color: #222222; font: inherit; font-weight: 700; }
+.chat-task-actions > .button-primary { background: #000000; color: #ffffff; }
+.chat-task-actions > .button-danger { border-color: #7a1f1f; background: #7a1f1f; color: #ffffff; }
+
+.chat-task-applied {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  border: 1px solid #777777;
+  background: #ffffff;
+  padding: 12px;
+  color: #222222;
+}
+
+.chat-task-applied > span { color: #666666; font-size: 10px; }
+.chat-task-applied > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 3px; }
+.chat-task-applied button { border: 1px solid #333333; background: #eeeeee; padding: 7px 9px; color: #111111; font: inherit; font-weight: 700; }
+.chat-task-applied button:hover { background: #dddddd; }
+.chat-task-applied.is-delete { border-color: #7a1f1f; background: #fff4f4; }
+
 @media (max-width: 800px) {
   html,
   body {
@@ -949,4 +1057,12 @@ body {
       linear-gradient(rgba(245, 245, 245, .64), rgba(245, 245, 245, .64)),
       url("/study-background.jpg") !important;
   }
+}
+
+@media (max-width: 560px) {
+  .chat-task-card { width: 100%; }
+  .chat-task-card > header { flex-direction: column; }
+  .chat-task-grid { grid-template-columns: 1fr; }
+  .chat-task-grid .span-2 { grid-column: auto; }
+  .chat-task-actions { align-items: stretch; flex-direction: column; }
 }
