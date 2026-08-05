@@ -766,7 +766,6 @@ input:disabled { background: #ededed; color: #888888; }
 *::after {
   border-radius: 0 !important;
   box-shadow: none !important;
-  background-image: none !important;
 }
 
 .field-help {
@@ -907,7 +906,7 @@ body {
   background-color: #b9b2ae;
   background-image:
     linear-gradient(rgba(245, 245, 245, .52), rgba(245, 245, 245, .52)),
-    url("/study-background.jpg");
+    url("/study-background.jpg") !important;
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -948,6 +947,6 @@ body {
   body {
     background-image:
       linear-gradient(rgba(245, 245, 245, .64), rgba(245, 245, 245, .64)),
-      url("/study-background.jpg");
+      url("/study-background.jpg") !important;
   }
 }
