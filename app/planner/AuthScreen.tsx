@@ -19,6 +19,7 @@ export function AuthScreen({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -28,13 +29,20 @@ export function AuthScreen({
     setError(null);
     setNotice(null);
     setPassword("");
+    setPasswordConfirmation("");
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
     setNotice(null);
+
+    if (mode === "signup" && password !== passwordConfirmation) {
+      setError("Passwords do not match. Enter the same password twice.");
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
       if (mode === "reset") {
@@ -150,6 +158,22 @@ export function AuthScreen({
                 required
               />
             </label>
+            {mode === "signup" ? (
+              <label>
+                <span>Confirm password</span>
+                <small className="field-help">Enter the same password again before creating the account.</small>
+                <input
+                  type="password"
+                  value={passwordConfirmation}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  placeholder="Enter the password again"
+                  minLength={8}
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(passwordConfirmation && password !== passwordConfirmation)}
+                  required
+                />
+              </label>
+            ) : null}
 
             {error ? <p className="form-message form-error">{error}</p> : null}
             {notice ? <p className="form-message form-success">{notice}</p> : null}
